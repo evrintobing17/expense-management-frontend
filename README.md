@@ -16,7 +16,7 @@ A Vue.js/Nuxt.js frontend for the Expense Management System that allows employee
 
 1. Clone the repository
 2. Copy `.env.example` to `.env` and configure your environment variables
-3. Run `docker-compose up -d` to start the database
+3. Run `docker-compose up -d` to start the service
 
 ## Demo Account Login
 
