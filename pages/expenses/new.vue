@@ -4,118 +4,168 @@
       <div class="navbar-content">
         <h1>Submit New Expense</h1>
         <div class="user-info">
+          <span>{{ user?.name }}</span>
           <NuxtLink to="/expenses" class="btn btn-secondary">Back to Expenses</NuxtLink>
-          <button @click="auth.logout" class="btn btn-danger">Logout</button>
+          <NuxtLink to="/" class="btn btn-secondary">Dashboard</NuxtLink>
+          <button @click="logout" class="btn btn-danger">Logout</button>
         </div>
       </div>
     </div>
 
     <div class="container">
       <div class="card">
-        <form @submit.prevent="handleSubmit">
+        <h2>New Expense Form</h2>
+        
+        <form @submit.prevent="submitExpense">
           <div class="form-group">
-            <label class="form-label">Amount (IDR)</label>
-            <div class="currency-input">
-              <span class="currency-prefix">Rp</span>
-              <input 
-                v-model="form.amount" 
-                type="number" 
-                class="form-input" 
-                placeholder="Enter amount"
-                min="10000"
-                max="50000000"
-                required
-                style="padding-left: 40px;"
-              >
-            </div>
-            <div v-if="form.amount >= 1000000" style="color: #856404; margin-top: 5px; font-size: 14px;">
-              ⚠️ This expense requires manager approval (≥ Rp 1.000.000)
-            </div>
-            <div v-else-if="form.amount > 0" style="color: #28a745; margin-top: 5px; font-size: 14px;">
-              ✓ This expense will be auto-approved
-            </div>
+            <label for="amount_idr">Amount (IDR)</label>
+            <input
+              id="amount_idr"
+              v-model.number="form.amount_idr"
+              type="number"
+              min="0"
+              step="1000"
+              required
+              class="form-control"
+              placeholder="Enter amount in IDR"
+            >
           </div>
           
           <div class="form-group">
-            <label class="form-label">Description</label>
-            <textarea 
-              v-model="form.description" 
-              class="form-textarea" 
-              placeholder="Enter expense description..."
+            <label for="description">Description</label>
+            <textarea
+              id="description"
+              v-model="form.description"
               required
+              class="form-control"
+              rows="3"
+              placeholder="Enter expense description"
             ></textarea>
           </div>
           
           <div class="form-group">
-            <label class="form-label">Receipt URL (Optional)</label>
-            <input 
-              v-model="form.receipt_url" 
-              type="url" 
-              class="form-input" 
-              placeholder="https://example.com/receipt.jpg"
+            <label for="receipt_url">Receipt URL (Optional)</label>
+            <input
+              id="receipt_url"
+              v-model="form.receipt_url"
+              type="text"
+              class="form-control"
+              placeholder="Enter receipt URL (optional)"
             >
           </div>
           
-          <div v-if="error" class="error">{{ error }}</div>
-          <div v-if="success" class="success">{{ success }}</div>
-          
-          <button 
-            type="submit" 
-            class="btn btn-primary" 
-            :disabled="loading"
-          >
+          <button type="submit" :disabled="loading" class="btn btn-primary">
             {{ loading ? 'Submitting...' : 'Submit Expense' }}
           </button>
           
-          <NuxtLink to="/expenses" class="btn btn-secondary">Cancel</NuxtLink>
+          <div v-if="error" class="error-message">
+            {{ error }}
+          </div>
+          
+          <div v-if="success" class="success-message">
+            Expense submitted successfully!
+          </div>
         </form>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
-const form = ref({
-  amount: '',
-  description: '',
-  receipt_url: ''
-})
 
-const loading = ref(false)
-const error = ref('')
-const success = ref('')
-
-const api = useApi()
-const auth = useAuth()
-
-if (!auth.isAuthenticated()) {
-  navigateTo('/login')
-}
-
-const handleSubmit = async () => {
-  error.value = ''
-  success.value = ''
-  loading.value = true
+<script>
+export default {
+  middleware: 'auth',
   
-  try {
-    const response = await api.post('/api/expenses', {
-      amount_idr: parseInt(form.value.amount),
-      description: form.value.description,
-      receipt_url: form.value.receipt_url || undefined
-    })
+  data() {
+    return {
+      form: {
+        amount_idr: null,
+        description: '',
+        receipt_url: ''
+      },
+      loading: false,
+      error: '',
+      success: false
+    }
+  },
+  
+  mounted() {
+    this.user = this.$auth.getUser()
+  },
+  
+  methods: {
+    async submitExpense() {
+      this.loading = true
+      this.error = ''
+      this.success = false
+      
+      try {
+        // Prepare the JSON data
+        const jsonData = {
+          amount_idr: this.form.amount_idr,
+          description: this.form.description,
+          receipt_url: this.form.receipt_url || null
+        }
+        
+        // Send the request using axios with JSON content type
+        const response = await this.$axios.post('/api/expenses', jsonData, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        this.success = true
+        
+        // Reset form
+        this.form.amount_idr = null
+        this.form.description = ''
+        this.form.receipt_url = ''
+        
+        // Redirect to expenses list after 2 seconds
+        setTimeout(() => {
+          this.$router.push('/expenses')
+        }, 2000)
+        
+      } catch (err) {
+        if (err.response && err.response.data) {
+          this.error = err.response.data.message || 'Failed to submit expense'
+        } else {
+          this.error = 'Failed to submit expense. Please try again.'
+        }
+        console.error('Error submitting expense:', err)
+      } finally {
+        this.loading = false
+      }
+    },
     
-    success.value = 'Expense submitted successfully!'
-    form.value = { amount: '', description: '', receipt_url: '' }
-    
-    setTimeout(() => {
-      navigateTo('/expenses')
-    }, 2000)
-    
-  } catch (err) {
-    error.value = 'Failed to submit expense. Please try again.'
-    console.error('Error submitting expense:', err)
-  } finally {
-    loading.value = false
+    logout() {
+      // This would call your useAuth composable
+      console.log('Logout clicked')
+      // this.$auth.logout()
+    }
   }
 }
 </script>
+
+<style scoped>
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.error-message {
+  color: #dc3545;
+  margin-top: 1rem;
+}
+
+.success-message {
+  color: #28a745;
+  margin-top: 1rem;
+}
+</style>

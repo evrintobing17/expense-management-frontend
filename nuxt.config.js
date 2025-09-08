@@ -3,7 +3,7 @@ export default {
     host: '0.0.0.0'
   },
   mode: 'universal',
-  css: ['@/assets/css/main.css'], // Fixed typo: asset -> assets
+  css: ['@/assets/css/main.css'],
   plugins: [
     '@/plugins/auth.js',
     '@/plugins/axios.js'
