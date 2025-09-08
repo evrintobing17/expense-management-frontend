@@ -4,14 +4,14 @@
       <div class="navbar-content">
         <h1>Expense Management System</h1>
         <div class="user-info">
-          <span>Hello, {{ $auth.getUser()?.name }}</span>
-          <button @click="$auth.logout()" class="btn btn-secondary">Logout</button>
+          <span>Hello, {{ userName }}</span>
+          <button @click="logout" class="btn btn-secondary">Logout</button>
         </div>
       </div>
     </div>
 
     <div class="container">
-      <div v-if="$auth.isManager()" class="card">
+      <div v-if="isManager" class="card">
         <h2>Manager Dashboard</h2>
         <div style="margin-top: 20px;">
           <nuxt-link to="/expenses/pending" class="btn btn-primary">
@@ -39,8 +39,25 @@
 export default {
   middleware: 'auth',
   
+  computed: {
+    userName() {
+      return this.$auth?.getUser()?.name || 'User'
+    },
+    isManager() {
+      return this.$auth?.isManager() || false
+    }
+  },
+  
+  methods: {
+    logout() {
+      if (this.$auth) {
+        this.$auth.logout()
+      }
+    }
+  },
+  
   mounted() {
-    if (!this.$auth.isAuthenticated()) {
+    if (!this.$auth?.isAuthenticated()) {
       this.$router.push('/login')
     }
   }

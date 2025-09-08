@@ -1,10 +1,13 @@
 export default {
-  server:{
+  server: {
     host: '0.0.0.0'
   },
   mode: 'universal',
-  css: ['@/asset/css/main.css'],
-  plugins: ['@/plugins/auth.js'],
+  css: ['@/assets/css/main.css'], // Fixed typo: asset -> assets
+  plugins: [
+    '@/plugins/auth.js',
+    '@/plugins/axios.js'
+  ],
   modules: [
     '@nuxtjs/axios'
   ],

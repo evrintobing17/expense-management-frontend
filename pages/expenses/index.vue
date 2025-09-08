@@ -4,10 +4,10 @@
       <div class="navbar-content">
         <h1>My Expenses</h1>
         <div class="user-info">
-          <span>{{ auth.user?.name }}</span>
+          <span>{{ user?.name }}</span>
           <NuxtLink to="/expenses/new" class="btn btn-success">New Expense</NuxtLink>
           <NuxtLink to="/" class="btn btn-secondary">Dashboard</NuxtLink>
-          <button @click="auth.logout" class="btn btn-danger">Logout</button>
+          <button @click="logout" class="btn btn-danger">Logout</button>
         </div>
       </div>
     </div>
@@ -52,60 +52,84 @@
   </div>
 </template>
 
-<script setup>
-const expenses = ref([])
-const loading = ref(true)
-const error = ref('')
-
-const api = useApi()
-const auth = useAuth()
-
-if (!auth.isAuthenticated()) {
-  navigateTo('/login')
-}
-
-const fetchExpenses = async () => {
-  try {
-    expenses.value = await api.get('/api/expenses')
-  } catch (err) {
-    error.value = 'Failed to fetch expenses'
-    console.error('Error fetching expenses:', err)
-  } finally {
-    loading.value = false
+<script>
+export default {
+  // Use middleware for Nuxt 2
+  middleware: 'auth',
+  
+  data() {
+    return {
+      expenses: [],
+      loading: true,
+      error: '',
+      user: null
+    }
+  },
+  
+  mounted() {
+    this.user = this.$auth.getUser()
+    this.fetchExpenses()
+  },
+  
+  methods: {
+    async fetchExpenses() {
+    try {
+      // Make sure token is set before making the request
+      const token = this.$auth.getToken()
+      if (token) {
+        this.$axios.setToken(token, 'Bearer')
+      }
+      
+      const response = await this.$axios.get('/api/expenses')
+      this.expenses = response.data
+    } catch (err) {
+      if (err.response && err.response.status === 401) {
+        this.error = 'Session expired. Please login again.'
+        this.$auth.logout()
+      } else {
+        this.error = 'Failed to fetch expenses'
+        console.error('Error fetching expenses:', err)
+      }
+    } finally {
+      this.loading = false
+    }
+  },
+    
+    formatIDR(amount) {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+      }).format(amount)
+    },
+    
+    formatDate(dateString) {
+      return new Date(dateString).toLocaleDateString('id-ID', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    },
+    
+    formatStatus(status) {
+      const statusMap = {
+        'pending': 'Pending',
+        'awaiting_approval': 'Awaiting Approval',
+        'approved': 'Approved',
+        'rejected': 'Rejected',
+        'auto_approved': 'Auto Approved',
+        'processing': 'Processing',
+        'completed': 'Completed',
+        'failed': 'Failed'
+      }
+      return statusMap[status] || status
+    },
+    
+    logout() {
+      this.$auth.logout()
+    }
   }
 }
-
-const formatIDR = (amount) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-  }).format(amount)
-}
-
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('id-ID', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-const formatStatus = (status) => {
-  const statusMap = {
-    'pending': 'Pending',
-    'awaiting_approval': 'Awaiting Approval',
-    'approved': 'Approved',
-    'rejected': 'Rejected',
-    'auto_approved': 'Auto Approved',
-    'processing': 'Processing',
-    'completed': 'Completed',
-    'failed': 'Failed'
-  }
-  return statusMap[status] || status
-}
-
-onMounted(fetchExpenses)
 </script>
